@@ -7,7 +7,7 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 /// {@endtemplate}
 class BleManagerCallbacksDiscoveredServices {
   final DiscoveredDevice device;
-  final DiscoveredService service;
+  final Service service;
 
   /// {@macro discovered_device_and_service}
   const BleManagerCallbacksDiscoveredServices(this.device, this.service);

@@ -74,7 +74,7 @@ abstract class BleManager<E extends BleManagerCallbacks> {
 
   /// A method that should be overriden to define a validation on the BLE device advertised services
   @visibleForOverriding
-  Future<DiscoveredService?> isRequiredServiceSupported(bool shouldCheckDoozCustomService);
+  Future<Service?> isRequiredServiceSupported(bool shouldCheckDoozCustomService);
 
   /// A method that should implement the GATT initialization.
   ///
@@ -264,7 +264,7 @@ abstract class BleManager<E extends BleManagerCallbacks> {
 
   Future<void> _negotiateAndInitGatt(bool shouldCheckDoozCustomService) async {
     final _callbacks = callbacks as E;
-    DiscoveredService? service;
+    Service? service;
     try {
       service = await isRequiredServiceSupported(shouldCheckDoozCustomService);
     } on BleManagerException catch (e) {

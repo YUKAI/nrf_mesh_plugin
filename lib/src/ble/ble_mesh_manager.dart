@@ -17,8 +17,8 @@ import 'package:retry/retry.dart';
 class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   static final BleMeshManager _instance = BleMeshManager._(FlutterReactiveBle());
 
-  /// The list of [DiscoveredService] that were discovered during the last connection process
-  late List<DiscoveredService> _discoveredServices;
+  /// The list of [Service] that were discovered during the last connection process
+  late List<Service> _discoveredServices;
 
   /// The subscription for data when the connected node is a mesh proxy (ie. already provisioned in a network)
   StreamSubscription<List<int>>? _meshProxyDataOutSubscription;
@@ -54,7 +54,7 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   Future<String?> getServiceMacId() async {
     String? macId;
     if (_hasExpectedService(doozCustomServiceUuid)) {
-      final service = _discoveredServices.firstWhere((service) => service.serviceId == doozCustomServiceUuid);
+      final service = _discoveredServices.firstWhere((service) => service.id == doozCustomServiceUuid);
       if (_hasExpectedCharacteristicUuid(service, doozCustomCharacteristicUuid)) {
         macId = await getMacId();
       }
@@ -63,22 +63,23 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   }
 
   @override
-  Future<DiscoveredService?> isRequiredServiceSupported(bool shouldCheckDoozCustomService) async {
+  Future<Service?> isRequiredServiceSupported(bool shouldCheckDoozCustomService) async {
     // In the case of a mesh node, the advertised service should be either 0x1827 or 0x1828
-    _discoveredServices = await bleInstance.discoverServices(device!.id);
+    await bleInstance.discoverAllServices(device!.id);
+    _discoveredServices = await bleInstance.getDiscoveredServices(device!.id);
     _log('services $_discoveredServices');
     isProvisioningCompleted = false;
     if (_hasExpectedService(meshProxyUuid)) {
       isProvisioningCompleted = true;
       // check for meshProxy characs
-      final service = _discoveredServices.firstWhere((service) => service.serviceId == meshProxyUuid);
+      final service = _discoveredServices.firstWhere((service) => service.id == meshProxyUuid);
       if (_hasExpectedCharacteristicUuid(service, meshProxyDataIn) &&
           _hasExpectedCharacteristicUuid(service, meshProxyDataOut)) {
         // if shouldCheckDoozCustomService is true, will also check for the existence of doozCustomServiceUuid
         // that has been introduced in firmwares v1.1.0 so we can get the mac address even on iOS devices
         if (shouldCheckDoozCustomService) {
           if (_hasExpectedService(doozCustomServiceUuid)) {
-            final service = _discoveredServices.firstWhere((service) => service.serviceId == doozCustomServiceUuid);
+            final service = _discoveredServices.firstWhere((service) => service.id == doozCustomServiceUuid);
             if (_hasExpectedCharacteristicUuid(service, doozCustomCharacteristicUuid)) {
               return service;
             }
@@ -94,7 +95,7 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
       return null;
     } else {
       if (_hasExpectedService(meshProvisioningUuid)) {
-        final service = _discoveredServices.firstWhere((service) => service.serviceId == meshProvisioningUuid);
+        final service = _discoveredServices.firstWhere((service) => service.id == meshProvisioningUuid);
         if (_hasExpectedCharacteristicUuid(service, meshProvisioningDataIn) &&
             _hasExpectedCharacteristicUuid(service, meshProvisioningDataOut)) {
           return service;
@@ -116,24 +117,24 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
     // notify about negociated MTU size
     await callbacks!.sendMtuToMeshManagerApi(mtuSize);
     // subscribe to notifications from the proper BLE service (proxy/provisioning)
-    DiscoveredService? discoveredService;
+    Service? discoveredService;
     if (isProvisioningCompleted) {
-      discoveredService = _discoveredServices.firstWhere((service) => service.serviceId == meshProxyUuid);
+      discoveredService = _discoveredServices.firstWhere((service) => service.id == meshProxyUuid);
       await _meshProxyDataOutSubscription?.cancel();
       _meshProxyDataOutSubscription =
-          _getDataOutSubscription(_getQualifiedCharacteristic(meshProxyDataOut, discoveredService.serviceId));
+          _getDataOutSubscription(_getQualifiedCharacteristic(meshProxyDataOut, discoveredService.id));
     } else {
-      discoveredService = _discoveredServices.firstWhere((service) => service.serviceId == meshProvisioningUuid);
+      discoveredService = _discoveredServices.firstWhere((service) => service.id == meshProvisioningUuid);
       await _meshProvisioningDataOutSubscription?.cancel();
       _meshProvisioningDataOutSubscription =
-          _getDataOutSubscription(_getQualifiedCharacteristic(meshProvisioningDataOut, discoveredService.serviceId));
+          _getDataOutSubscription(_getQualifiedCharacteristic(meshProvisioningDataOut, discoveredService.id));
     }
   }
 
-  bool _hasExpectedService(Uuid serviceUuid) => _discoveredServices.any((service) => service.serviceId == serviceUuid);
+  bool _hasExpectedService(Uuid serviceUuid) => _discoveredServices.any((service) => service.id == serviceUuid);
 
-  bool _hasExpectedCharacteristicUuid(DiscoveredService discoveredService, Uuid expectedCharacteristicId) =>
-      discoveredService.characteristicIds.any((uuid) => uuid == expectedCharacteristicId);
+  bool _hasExpectedCharacteristicUuid(Service discoveredService, Uuid expectedCharacteristicId) =>
+      discoveredService.characteristics.map((e) => e.id).any((uuid) => uuid == expectedCharacteristicId);
 
   QualifiedCharacteristic _getQualifiedCharacteristic(Uuid characteristicId, Uuid serviceId) => QualifiedCharacteristic(
         characteristicId: characteristicId,
@@ -192,9 +193,9 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
       try {
         await retry(
           () async {
-            final service = _discoveredServices.firstWhere((service) => service.serviceId == meshProxyUuid);
+            final service = _discoveredServices.firstWhere((service) => service.id == meshProxyUuid);
             await bleInstance.writeCharacteristicWithoutResponse(
-                _getQualifiedCharacteristic(meshProxyDataIn, service.serviceId),
+                _getQualifiedCharacteristic(meshProxyDataIn, service.id),
                 value: data);
           },
           retryIf: (e) => e is PlatformException,
@@ -205,9 +206,9 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
       try {
         await retry(
           () async {
-            final service = _discoveredServices.firstWhere((service) => service.serviceId == meshProvisioningUuid);
+            final service = _discoveredServices.firstWhere((service) => service.id == meshProvisioningUuid);
             await bleInstance.writeCharacteristicWithoutResponse(
-                _getQualifiedCharacteristic(meshProvisioningDataIn, service.serviceId),
+                _getQualifiedCharacteristic(meshProvisioningDataIn, service.id),
                 value: data);
           },
           retryIf: (e) => e is PlatformException,
