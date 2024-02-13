@@ -64,45 +64,46 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
 
   @override
   Future<Service?> isRequiredServiceSupported(bool shouldCheckDoozCustomService) async {
-    // In the case of a mesh node, the advertised service should be either 0x1827 or 0x1828
-    await bleInstance.discoverAllServices(device!.id);
-    _discoveredServices = await bleInstance.getDiscoveredServices(device!.id);
-    _log('services $_discoveredServices');
-    isProvisioningCompleted = false;
-    if (_hasExpectedService(meshProxyUuid)) {
-      isProvisioningCompleted = true;
-      // check for meshProxy characs
-      final service = _discoveredServices.firstWhere((service) => service.id == meshProxyUuid);
-      if (_hasExpectedCharacteristicUuid(service, meshProxyDataIn) &&
-          _hasExpectedCharacteristicUuid(service, meshProxyDataOut)) {
-        // if shouldCheckDoozCustomService is true, will also check for the existence of doozCustomServiceUuid
-        // that has been introduced in firmwares v1.1.0 so we can get the mac address even on iOS devices
-        if (shouldCheckDoozCustomService) {
-          if (_hasExpectedService(doozCustomServiceUuid)) {
-            final service = _discoveredServices.firstWhere((service) => service.id == doozCustomServiceUuid);
-            if (_hasExpectedCharacteristicUuid(service, doozCustomCharacteristicUuid)) {
-              return service;
+    for (var retry=0; retry<5; retry++) {
+      // In the case of a mesh node, the advertised service should be either 0x1827 or 0x1828
+      await bleInstance.discoverAllServices(device!.id);
+      _discoveredServices = await bleInstance.getDiscoveredServices(device!.id);
+      _log('services $_discoveredServices');
+      isProvisioningCompleted = false;
+      if (_hasExpectedService(meshProxyUuid)) {
+        isProvisioningCompleted = true;
+        // check for meshProxy characs
+        final service = _discoveredServices.firstWhere((service) => service.id == meshProxyUuid);
+        if (_hasExpectedCharacteristicUuid(service, meshProxyDataIn) &&
+            _hasExpectedCharacteristicUuid(service, meshProxyDataOut)) {
+          // if shouldCheckDoozCustomService is true, will also check for the existence of doozCustomServiceUuid
+          // that has been introduced in firmwares v1.1.0 so we can get the mac address even on iOS devices
+          if (shouldCheckDoozCustomService) {
+            if (_hasExpectedService(doozCustomServiceUuid)) {
+              final service = _discoveredServices.firstWhere((service) => service.id == doozCustomServiceUuid);
+              if (_hasExpectedCharacteristicUuid(service, doozCustomCharacteristicUuid)) {
+                return service;
+              }
             }
+            throw const BleManagerException(
+              BleManagerFailureCode.doozServiceNotFound,
+              'plz update the firmware to v1.1.x',
+            );
+          } else {
+            return service;
           }
-          throw const BleManagerException(
-            BleManagerFailureCode.doozServiceNotFound,
-            'plz update the firmware to v1.1.x',
-          );
-        } else {
-          return service;
+        }
+      } else {
+        if (_hasExpectedService(meshProvisioningUuid)) {
+          final service = _discoveredServices.firstWhere((service) => service.id == meshProvisioningUuid);
+          if (_hasExpectedCharacteristicUuid(service, meshProvisioningDataIn) &&
+              _hasExpectedCharacteristicUuid(service, meshProvisioningDataOut)) {
+            return service;
+          }
         }
       }
-      return null;
-    } else {
-      if (_hasExpectedService(meshProvisioningUuid)) {
-        final service = _discoveredServices.firstWhere((service) => service.id == meshProvisioningUuid);
-        if (_hasExpectedCharacteristicUuid(service, meshProvisioningDataIn) &&
-            _hasExpectedCharacteristicUuid(service, meshProvisioningDataOut)) {
-          return service;
-        }
-      }
-      return null;
     }
+    return null;
   }
 
   @override
