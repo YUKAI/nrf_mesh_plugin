@@ -45,6 +45,7 @@ class MeshManagerApi {
   late final _onConfigNetworkTransmitStatusController = StreamController<ConfigNetworkTransmitStatus>.broadcast();
   late final _onConfigDefaultTtlStatusController = StreamController<ConfigDefaultTtlStatus>.broadcast();
   late final _onConfigBeaconStatusController = StreamController<ConfigBeaconStatus>.broadcast();
+  late final _onConfigProxyStatusController = StreamController<ConfigProxyStatus>.broadcast();
   late final _onLightLightnessStatusController = StreamController<LightLightnessStatusData>.broadcast();
   late final _onLightCtlStatusController = StreamController<LightCtlStatusData>.broadcast();
   late final _onLightHslStatusController = StreamController<LightHslStatusData>.broadcast();
@@ -75,6 +76,7 @@ class MeshManagerApi {
   late StreamSubscription<ConfigNetworkTransmitStatus> _onConfigNetworkTransmitStatusSubscription;
   late StreamSubscription<ConfigDefaultTtlStatus> _onConfigDefaultTtlStatusSubscription;
   late StreamSubscription<ConfigBeaconStatus> _onConfigBeaconStatusSubscription;
+  late StreamSubscription<ConfigProxyStatus> _onConfigProxyStatusSubscription;
   late StreamSubscription<LightLightnessStatusData> _onLightLightnessStatusSubscription;
   late StreamSubscription<LightCtlStatusData> _onLightCtlStatusSubscription;
   late StreamSubscription<LightHslStatusData> _onLightHslStatusSubscription;
@@ -200,8 +202,14 @@ class MeshManagerApi {
         .where((event) => event['eventName'] == MeshManagerApiEvent.configBeaconStatus.value)
         .map((event) => ConfigBeaconStatus.fromJson(event))
         .listen(_onConfigBeaconStatusController.add);
+    _onConfigProxyStatusSubscription = _eventChannelStream
+        .where((event) => event['eventName'] == MeshManagerApiEvent.configProxyStatus.value)
+        .map((event) => ConfigProxyStatus.fromJson(event))
+        .listen(_onConfigProxyStatusController.add);
   }
   Stream<ConfigBeaconStatus> get onConfigBeaconStatus => _onConfigBeaconStatusController.stream;
+
+  Stream<ConfigProxyStatus> get onConfigProxyStatus => _onConfigProxyStatusController.stream;
 
   Stream<ConfigNetworkTransmitStatus> get onConfigNetworkTransmitStatus =>
       _onConfigNetworkTransmitStatusController.stream;
@@ -356,7 +364,9 @@ class MeshManagerApi {
         _onConfigKeyRefreshPhaseStatusSubscription.cancel(),
         _onConfigKeyRefreshPhaseStatusController.close(),
         _onConfigBeaconStatusSubscription.cancel(),
-        _onConfigBeaconStatusController.close()
+        _onConfigBeaconStatusController.close(),
+        _onConfigProxyStatusSubscription.cancel(),
+        _onConfigProxyStatusController.close()
       ]);
 
   /// Loads the mesh network from the local database.
@@ -857,6 +867,42 @@ class MeshManagerApi {
       await _methodChannel.invokeMethod('setSNBeacon', {
         'address': address,
         'enable': enable,
+      });
+      return status;
+    } else {
+      throw UnimplementedError('${Platform.environment} not supported');
+    }
+  }
+
+  /// Will get the current proxy configuration
+  Future<ConfigProxyStatus> getProxy(int address) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final status = _onConfigProxyStatusController.stream.firstWhere(
+            (element) => element.source == address,
+        orElse: () => const ConfigProxyStatus(-1, -1, -1),
+      );
+      await _methodChannel.invokeMethod('getProxy', {'address': address});
+      return status;
+    } else {
+      throw UnimplementedError('${Platform.environment} not supported');
+    }
+  }
+
+  /// Will set the proxy configuration.
+  ///
+  /// If [state] is 1, the node that receives this message will be a proxy device.
+  Future<ConfigProxyStatus> setProxy({
+    int address = 0xFFFF,
+    int proxyState = 1,
+  }) async {
+    if (Platform.isAndroid) {
+      final status = _onConfigProxyStatusController.stream.firstWhere(
+            (element) => element.source == address,
+        orElse: () => const ConfigProxyStatus(-1, -1, -1),
+      );
+      await _methodChannel.invokeMethod('setProxy', {
+        'address': address,
+        'proxyState': proxyState,
       });
       return status;
     } else {

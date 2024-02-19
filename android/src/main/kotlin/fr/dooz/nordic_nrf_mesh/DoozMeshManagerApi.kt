@@ -531,6 +531,19 @@ class DoozMeshManagerApi(context: Context, binaryMessenger: BinaryMessenger) : S
                     result.error("102", e.message, "an error occured while checking service data")
                 }
             }
+            "getProxy" -> {
+                val address = call.argument<Int>("address")!!
+                val meshMessage: MeshMessage = ConfigProxyGet()
+                mMeshManagerApi.createMeshPdu(address, meshMessage)
+                result.success(null)
+            }
+            "setProxy" -> {
+                val address = call.argument<Int>("address")!!
+                val proxyState = call.argument<Int>("proxyState")!!
+                val meshMessage: MeshMessage = ConfigProxySet(proxyState)
+                mMeshManagerApi.createMeshPdu(address, meshMessage)
+                result.success(null)
+            }
             else -> {
                 result.notImplemented()
             }

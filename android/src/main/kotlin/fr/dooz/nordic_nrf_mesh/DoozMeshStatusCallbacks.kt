@@ -276,6 +276,17 @@ class DoozMeshStatusCallbacks(var eventSink: EventChannel.EventSink?): MeshStatu
                     ))
                 }
             }
+            is ConfigProxyStatus -> {
+                Log.d(tag, "received a ConfigProxyStatus")
+                Handler(Looper.getMainLooper()).post {
+                    eventSink?.success(mapOf(
+                        "eventName" to "onConfigProxyStatus",
+                        "source" to meshMessage.src,
+                        "destination" to meshMessage.dst,
+                        "proxyState" to meshMessage.getProxyState()
+                    ))
+                }
+            }
             else -> {
                 Log.d(tag, "Unknown message received :" + meshMessage.javaClass.toString())
             }

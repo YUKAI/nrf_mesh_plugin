@@ -257,6 +257,7 @@ Future<ProvisionedMeshNode> _provisioning(
     isHandlingConnectErrors = false;
     // wait for listeners to do their job
     await completer.future;
+    await meshManagerApi.setProxy(address: await provisionedMeshNode.unicastAddress, proxyState: 1);
     // cleanup resources
     await meshManagerApi.cleanProvisioningData();
     await bleMeshManager.refreshDeviceCache();
