@@ -1118,6 +1118,18 @@ class MeshManagerApi {
     throw Exception('Platform not supported');
   }
 
+  /// A method to get the sequence number of a given mesh node [address]
+  Future<int> getSequenceNumberForAddress(int address) async {
+    if (Platform.isIOS || Platform.isAndroid) {
+      final result = await _methodChannel.invokeMethod<int>(
+        'getSequenceNumberForAddress',
+        {'address': address},
+      );
+      return result!;
+    }
+    throw Exception('Platform not supported');
+  }
+
   /// A method to set the sequence number of a given mesh [node]
   Future<void> setSequenceNumber(ProvisionedMeshNode node, int seqNum) async => _methodChannel.invokeMethod<void>(
         'setSequenceNumberForAddress',
