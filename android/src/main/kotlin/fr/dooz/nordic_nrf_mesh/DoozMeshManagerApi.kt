@@ -544,6 +544,21 @@ class DoozMeshManagerApi(context: Context, binaryMessenger: BinaryMessenger) : S
                 mMeshManagerApi.createMeshPdu(address, meshMessage)
                 result.success(null)
             }
+            "getRelay" -> {
+                val address = call.argument<Int>("address")!!
+                val meshMessage: MeshMessage = ConfigRelayGet()
+                mMeshManagerApi.createMeshPdu(address, meshMessage)
+                result.success(null)
+            }
+            "setRelay" -> {
+                val address = call.argument<Int>("address")!!
+                val relay = call.argument<Int>("relay")!!
+                val relayRetransmitCount = call.argument<Int>("relayRetransmitCount")!!
+                val relayRetransmitIntervalSteps = call.argument<Int>("relayRetransmitIntervalSteps")!!
+                val meshMessage: MeshMessage = ConfigRelaySet(relay, relayRetransmitCount, relayRetransmitIntervalSteps)
+                mMeshManagerApi.createMeshPdu(address, meshMessage)
+                result.success(null)
+            }
             else -> {
                 result.notImplemented()
             }

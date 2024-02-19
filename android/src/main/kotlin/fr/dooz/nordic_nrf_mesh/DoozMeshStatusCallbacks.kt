@@ -287,6 +287,19 @@ class DoozMeshStatusCallbacks(var eventSink: EventChannel.EventSink?): MeshStatu
                     ))
                 }
             }
+            is ConfigRelayStatus -> {
+                Log.d(tag, "received a ConfigRelayStatus")
+                Handler(Looper.getMainLooper()).post {
+                    eventSink?.success(mapOf(
+                        "eventName" to "onConfigRelayStatus",
+                        "source" to meshMessage.src,
+                        "destination" to meshMessage.dst,
+                        "relay" to meshMessage.getRelay(),
+                        "relayRetransmitCount" to meshMessage.getRelayRetransmitCount(),
+                        "relayRetransmitIntervalSteps" to meshMessage.getRelayRetransmitIntervalSteps()
+                    ))
+                }
+            }
             else -> {
                 Log.d(tag, "Unknown message received :" + meshMessage.javaClass.toString())
             }

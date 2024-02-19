@@ -46,6 +46,7 @@ class MeshManagerApi {
   late final _onConfigDefaultTtlStatusController = StreamController<ConfigDefaultTtlStatus>.broadcast();
   late final _onConfigBeaconStatusController = StreamController<ConfigBeaconStatus>.broadcast();
   late final _onConfigProxyStatusController = StreamController<ConfigProxyStatus>.broadcast();
+  late final _onConfigRelayStatusController = StreamController<ConfigRelayStatus>.broadcast();
   late final _onLightLightnessStatusController = StreamController<LightLightnessStatusData>.broadcast();
   late final _onLightCtlStatusController = StreamController<LightCtlStatusData>.broadcast();
   late final _onLightHslStatusController = StreamController<LightHslStatusData>.broadcast();
@@ -77,6 +78,7 @@ class MeshManagerApi {
   late StreamSubscription<ConfigDefaultTtlStatus> _onConfigDefaultTtlStatusSubscription;
   late StreamSubscription<ConfigBeaconStatus> _onConfigBeaconStatusSubscription;
   late StreamSubscription<ConfigProxyStatus> _onConfigProxyStatusSubscription;
+  late StreamSubscription<ConfigRelayStatus> _onConfigRelayStatusSubscription;
   late StreamSubscription<LightLightnessStatusData> _onLightLightnessStatusSubscription;
   late StreamSubscription<LightCtlStatusData> _onLightCtlStatusSubscription;
   late StreamSubscription<LightHslStatusData> _onLightHslStatusSubscription;
@@ -206,10 +208,16 @@ class MeshManagerApi {
         .where((event) => event['eventName'] == MeshManagerApiEvent.configProxyStatus.value)
         .map((event) => ConfigProxyStatus.fromJson(event))
         .listen(_onConfigProxyStatusController.add);
+    _onConfigRelayStatusSubscription = _eventChannelStream
+        .where((event) => event['eventName'] == MeshManagerApiEvent.configRelayStatus.value)
+        .map((event) => ConfigRelayStatus.fromJson(event))
+        .listen(_onConfigRelayStatusController.add);
   }
   Stream<ConfigBeaconStatus> get onConfigBeaconStatus => _onConfigBeaconStatusController.stream;
 
   Stream<ConfigProxyStatus> get onConfigProxyStatus => _onConfigProxyStatusController.stream;
+
+  Stream<ConfigRelayStatus> get onConfigRelayStatus => _onConfigRelayStatusController.stream;
 
   Stream<ConfigNetworkTransmitStatus> get onConfigNetworkTransmitStatus =>
       _onConfigNetworkTransmitStatusController.stream;
@@ -366,7 +374,9 @@ class MeshManagerApi {
         _onConfigBeaconStatusSubscription.cancel(),
         _onConfigBeaconStatusController.close(),
         _onConfigProxyStatusSubscription.cancel(),
-        _onConfigProxyStatusController.close()
+        _onConfigProxyStatusController.close(),
+        _onConfigRelayStatusSubscription.cancel(),
+        _onConfigRelayStatusController.close()
       ]);
 
   /// Loads the mesh network from the local database.
@@ -903,6 +913,46 @@ class MeshManagerApi {
       await _methodChannel.invokeMethod('setProxy', {
         'address': address,
         'proxyState': proxyState,
+      });
+      return status;
+    } else {
+      throw UnimplementedError('${Platform.environment} not supported');
+    }
+  }
+
+  /// Will get the current relay configuration
+  Future<ConfigRelayStatus> getRelay(int address) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final status = _onConfigRelayStatusController.stream.firstWhere(
+            (element) => element.source == address,
+        orElse: () => const ConfigRelayStatus(-1, -1, -1, -1, -1),
+      );
+      await _methodChannel.invokeMethod('getRelay', {'address': address});
+      return status;
+    } else {
+      throw UnimplementedError('${Platform.environment} not supported');
+    }
+  }
+
+  /// Will set the relay configuration.
+  ///
+  /// If [relay] is 1, the node that receives this message will be a relay device.
+  Future<ConfigRelayStatus> setRelay({
+    int address = 0xFFFF,
+    int relay = 1,
+    int relayRetransmitCount = 4,
+    int relayRetransmitIntervalSteps = 15,
+  }) async {
+    if (Platform.isAndroid) {
+      final status = _onConfigRelayStatusController.stream.firstWhere(
+            (element) => element.source == address,
+        orElse: () => const ConfigRelayStatus(-1, -1, -1, -1, -1),
+      );
+      await _methodChannel.invokeMethod('setRelay', {
+        'address': address,
+        'relay': relay,
+        'relayRetransmitCount': relayRetransmitCount,
+        'relayRetransmitIntervalSteps': relayRetransmitIntervalSteps,
       });
       return status;
     } else {

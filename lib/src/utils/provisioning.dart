@@ -258,6 +258,12 @@ Future<ProvisionedMeshNode> _provisioning(
     // wait for listeners to do their job
     await completer.future;
     await meshManagerApi.setProxy(address: await provisionedMeshNode.unicastAddress, proxyState: 1);
+    await meshManagerApi.setRelay(
+        address: await provisionedMeshNode.unicastAddress,
+        relay: 1,
+        relayRetransmitCount: 4,
+        relayRetransmitIntervalSteps: 15
+    );
     // cleanup resources
     await meshManagerApi.cleanProvisioningData();
     await bleMeshManager.refreshDeviceCache();
