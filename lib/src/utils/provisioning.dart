@@ -257,6 +257,7 @@ Future<ProvisionedMeshNode> _provisioning(
     isHandlingConnectErrors = false;
     // wait for listeners to do their job
     await completer.future;
+    provisionedMeshNode.nodeName = deviceToProvision.name;
     await meshManagerApi.setProxy(address: await provisionedMeshNode.unicastAddress, proxyState: 1);
     await meshManagerApi.setRelay(
         address: await provisionedMeshNode.unicastAddress,
