@@ -158,10 +158,10 @@ class DoozMeshManagerApi(context: Context, binaryMessenger: BinaryMessenger) : S
                 result.success(null)
             }
             "sendGenericOnOffSet" -> {
+                val sequenceNumber = getSequenceNumber(mMeshManagerApi.meshNetwork)
                 val address = call.argument<Int>("address")!!
                 val value = call.argument<Boolean>("value")!!
                 val keyIndex = call.argument<Int>("keyIndex")!!
-                val sequenceNumber = call.argument<Int>("sequenceNumber")!!
                 val transitionStep = call.argument<Int>("transitionStep")
                 val transitionResolution = call.argument<Int>("transitionResolution")
                 val delay = call.argument<Int>("delay")

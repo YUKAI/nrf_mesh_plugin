@@ -475,8 +475,7 @@ class MeshManagerApi {
   /// Will send a GenericLevelOnOff message to the given [address].
   Future<GenericOnOffStatusData> sendGenericOnOffSet(
     int address,
-    bool value,
-    int sequenceNumber, {
+    bool value, {
     int keyIndex = 0,
     int transitionStep = 0,
     int transitionResolution = 0,
@@ -489,7 +488,6 @@ class MeshManagerApi {
     await _methodChannel.invokeMethod('sendGenericOnOffSet', {
       'address': address,
       'value': value,
-      'sequenceNumber': sequenceNumber,
       'keyIndex': keyIndex,
       'transitionStep': transitionStep,
       'transitionResolution': transitionResolution,
